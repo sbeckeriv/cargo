@@ -65,6 +65,9 @@ pub struct PackageRegistry<'cfg> {
     source_ids: HashMap<SourceId, (SourceId, Kind)>,
 
     locked: HashMap<SourceId, HashMap<String, Vec<(PackageId, Vec<PackageId>)>>>,
+
+    // Retry all errors for now.
+    network_retry: u32
 }
 
 #[derive(PartialEq, Eq, Clone, Copy)]
@@ -75,13 +78,14 @@ enum Kind {
 }
 
 impl<'cfg> PackageRegistry<'cfg> {
-    pub fn new(config: &'cfg Config) -> PackageRegistry<'cfg> {
+    pub fn new(config: &'cfg Config, network_retry: u32) -> PackageRegistry<'cfg> {
         PackageRegistry {
             sources: SourceMap::new(),
             source_ids: HashMap::new(),
             overrides: vec![],
             config: config,
             locked: HashMap::new(),
+            network_retry: network_retry
         }
     }
 
@@ -91,11 +95,18 @@ impl<'cfg> PackageRegistry<'cfg> {
         // TODO: Only call source with package ID if the package came from the
         // source
         let mut ret = Vec::new();
-
+        let retry_count = self.network_retry;
         for (_, source) in self.sources.sources_mut() {
-            try!(source.download(package_ids));
+            (0..retry_count+1).any(|try|{
+                match source.download(package_ids){
+                    Ok(_)=>true ,
+                    Err(e) => {
+                        human(format!("Failed to download {:?} Err {}\n{} tries remaining", package_ids, e, retry_count - try));
+                        false
+                    }
+                }
+            });
             let packages = try!(source.get(package_ids));
-
             ret.extend(packages.into_iter());
         }
 
@@ -185,7 +196,17 @@ impl<'cfg> PackageRegistry<'cfg> {
 
             // Ensure the source has fetched all necessary remote data.
             let p = profile::start(format!("updating: {}", source_id));
-            try!(source.update());
+            let retry_count = self.network_retry;
+            assert!((0..retry_count+1).any(|try|{
+                match source.update(){
+                    Ok(_)=>true ,
+                    Err(e) => {
+                        println!("Failed to update source Err {}\n{} tries remaining", e, retry_count - try );
+                        //can I run the try logic for the last run?
+                        false
+                    }
+                }
+            }), "Failed to update source");
             drop(p);
 
             if kind == Kind::Override {

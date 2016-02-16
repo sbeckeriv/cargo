@@ -8,6 +8,7 @@ pub struct Options {
     flag_verbose: bool,
     flag_quiet: bool,
     flag_color: Option<String>,
+    flag_retry: Option<u32>,
 }
 
 pub const USAGE: &'static str = "
@@ -22,6 +23,7 @@ Options:
     -v, --verbose            Use verbose output
     -q, --quiet              No output printed to stdout
     --color WHEN             Coloring: auto, always, never
+    --retry N                Retry network communications N times Default: 2
 
 If a lockfile is available, this command will ensure that all of the git
 dependencies and/or registries dependencies are downloaded and locally
@@ -37,7 +39,13 @@ pub fn execute(options: Options, config: &Config) -> CliResult<Option<()>> {
     try!(config.shell().set_verbosity(options.flag_verbose, options.flag_quiet));
     try!(config.shell().set_color_config(options.flag_color.as_ref().map(|s| &s[..])));
     let root = try!(find_root_manifest_for_wd(options.flag_manifest_path, config.cwd()));
-    try!(ops::fetch(&root, config));
+
+    let fetch_opts = ops::FetchOptions {
+        network_retry: options.flag_retry.unwrap_or(2),
+        config: config,
+    };
+
+    try!(ops::fetch(&root, &fetch_opts));
     Ok(None)
 }
 

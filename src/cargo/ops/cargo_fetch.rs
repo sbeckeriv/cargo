@@ -5,10 +5,15 @@ use core::{Package, PackageId, Resolve};
 use ops;
 use util::{CargoResult, Config, human, ChainError};
 
+pub struct FetchOptions<'a>{
+    pub config: &'a Config,
+    pub network_retry: u32,
+}
+
 /// Executes `cargo fetch`.
-pub fn fetch(manifest_path: &Path, config: &Config) -> CargoResult<()> {
-    let package = try!(Package::for_path(manifest_path, config));
-    let mut registry = PackageRegistry::new(config);
+pub fn fetch(manifest_path: &Path, opts: &FetchOptions) -> CargoResult<()> {
+    let package = try!(Package::for_path(manifest_path, opts.config));
+    let mut registry = PackageRegistry::new(opts.config, opts.network_retry);
     let resolve = try!(ops::resolve_pkg(&mut registry, &package));
     let _ = try!(get_resolved_packages(&resolve, &mut registry));
     Ok(())

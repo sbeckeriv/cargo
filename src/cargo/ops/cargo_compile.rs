@@ -106,7 +106,7 @@ pub fn resolve_dependencies<'a>(root_package: &Package,
 
     let override_ids = try!(source_ids_from_config(config, root_package.root()));
 
-    let mut registry = PackageRegistry::new(config);
+    let mut registry = PackageRegistry::new(config, 0);
 
     if let Some(source) = source {
         registry.add_preloaded(root_package.package_id().source_id(), source);

@@ -50,7 +50,7 @@ pub fn clean(manifest_path: &Path, opts: &CleanOptions) -> CargoResult<()> {
                                BuildConfig::default(),
                                root.manifest().profiles()));
 
-    let mut registry = PackageRegistry::new(opts.config);
+    let mut registry = PackageRegistry::new(opts.config, 0);
 
     // resolve package specs and remove the corresponding packages
     for spec in opts.spec {
