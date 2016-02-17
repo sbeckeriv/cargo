@@ -197,16 +197,19 @@ impl<'cfg> PackageRegistry<'cfg> {
             // Ensure the source has fetched all necessary remote data.
             let p = profile::start(format!("updating: {}", source_id));
             let retry_count = self.network_retry;
-            assert!((0..retry_count+1).any(|try|{
+            let downloaded = (0..retry_count+1).any(|try|{
                 match source.update(){
                     Ok(_)=>true ,
                     Err(e) => {
-                        println!("Failed to update source Err {}\n{} tries remaining", e, retry_count - try );
+                        println!("failed to update source Err {}\n{} tries remaining", e, retry_count - try );
                         //can I run the try logic for the last run?
                         false
                     }
                 }
-            }), "Failed to update source");
+            });
+            if !downloaded{
+                return Err(human("failed to update source"))
+            }
             drop(p);
 
             if kind == Kind::Override {

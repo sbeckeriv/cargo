@@ -231,8 +231,10 @@ test!(bad_git_dependency {
 
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
-  [..]Failed to clone into:[..]
-  0 tries remaining
+    Unable to update file:///
+
+Caused by:
+failed to update source
 "));
 });
 
