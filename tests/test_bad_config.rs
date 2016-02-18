@@ -231,10 +231,13 @@ test!(bad_git_dependency {
 
     assert_that(foo.cargo_process("build").arg("-v"),
                 execs().with_status(101).with_stderr("\
-    Unable to update file:///
+Unable to update file:///
 
 Caused by:
-failed to update source
+  failed to clone into: [..]
+
+Caused by:
+  [[..]] 'file:///' is not a valid local file URI
 "));
 });
 

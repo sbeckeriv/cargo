@@ -97,15 +97,17 @@ impl<'cfg> PackageRegistry<'cfg> {
         let mut ret = Vec::new();
         let retry_count = self.network_retry;
         for (_, source) in self.sources.sources_mut() {
-            (0..retry_count+1).any(|try|{
-                match source.download(package_ids){
-                    Ok(_)=>true ,
-                    Err(e) => {
-                        human(format!("Failed to download {:?} Err {}\n{} tries remaining", package_ids, e, retry_count - try));
-                        false
+            for try in 0..retry_count + 1{
+                let result = source.download(package_ids);
+                if result.is_err(){
+                    if retry_count > 0{
+                        println!("failed to update source Err {:?}\n{} tries remaining", result, retry_count - try );
+                    }
+                    if retry_count - try == 0 {
+                        try!(result);
                     }
                 }
-            });
+            };
             let packages = try!(source.get(package_ids));
             ret.extend(packages.into_iter());
         }
@@ -197,19 +199,18 @@ impl<'cfg> PackageRegistry<'cfg> {
             // Ensure the source has fetched all necessary remote data.
             let p = profile::start(format!("updating: {}", source_id));
             let retry_count = self.network_retry;
-            let downloaded = (0..retry_count+1).any(|try|{
-                match source.update(){
-                    Ok(_)=>true ,
-                    Err(e) => {
-                        println!("failed to update source Err {}\n{} tries remaining", e, retry_count - try );
-                        //can I run the try logic for the last run?
-                        false
+            for try in 0..retry_count + 1 {
+                let result = source.update();
+                if result.is_err() {
+                    if retry_count > 0 {
+                        println!("failed to update source Err {:?}\n{} tries remaining", result, retry_count - try );
+                    }
+                    if retry_count - try == 0{
+                        try!(result);
                     }
                 }
-            });
-            if !downloaded{
-                return Err(human("failed to update source"))
-            }
+            };
+
             drop(p);
 
             if kind == Kind::Override {
