@@ -4,6 +4,8 @@ use std::collections::hash_map::HashMap;
 use core::{Source, SourceId, SourceMap, Summary, Dependency, PackageId, Package};
 use util::{CargoResult, ChainError, Config, human, profile};
 
+use term::color::YELLOW;
+
 /// Source of information about a group of packages.
 ///
 /// See also `core::Source`.
@@ -101,7 +103,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 let result = source.download(package_ids);
                 if result.is_err(){
                     if retry_count > 0{
-                        println!("failed to update source Err {:?}\n{} tries remaining", result, retry_count - try );
+                        try!(self.config.shell().say(format!("failed to update source Err {:?}\n{} tries remaining", result, retry_count - try ), YELLOW));
                     }
                     if retry_count - try == 0 {
                         try!(result);
@@ -203,7 +205,7 @@ impl<'cfg> PackageRegistry<'cfg> {
                 let result = source.update();
                 if result.is_err() {
                     if retry_count > 0 {
-                        println!("failed to update source Err {:?}\n{} tries remaining", result, retry_count - try );
+                        try!(self.config.shell().say(format!("failed to update source Err {:?}\n{} tries remaining", result, retry_count - try ), YELLOW));
                     }
                     if retry_count - try == 0{
                         try!(result);
